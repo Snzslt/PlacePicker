@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
 import Places from './components/Places.jsx';
 import { AVAILABLE_PLACES } from './data.js';
@@ -8,25 +8,32 @@ import logoImg from './assets/logo.png';
 import { sortPlacesByDistance } from './loc.js';
 
 function App() {
-  const modal = useRef();
+  const [mpdalIsOpen, setModalIsOpen] = useState(false);
   const selectedPlace = useRef();
+  const [availablePlaces, setAvailablrPlaces] = useState([]);
   const [pickedPlaces, setPickedPlaces] = useState([]);
-  
+
 // this is side effect
+useEffect(()=> {
   navigator.geolocation.getCurrentPosition((position)=> {
     const soretedPlaces = sortPlacesByDistance(
       AVAILABLE_PLACES,
        position.coords.latitude,
-       position.coords.longitude)
+       position.coords.longitude
+       );
+       setAvailablrPlaces(soretedPlaces);
+
   });
+}, []);
+ 
 
   function handleStartRemovePlace(id) {
-    modal.current.open();
+    setModalIsOpen(true);
     selectedPlace.current = id;
   }
 
   function handleStopRemovePlace() {
-    modal.current.close();
+    setModalIsOpen(false);
   }
 
   function handleSelectPlace(id) {
@@ -39,20 +46,27 @@ function App() {
     });
   }
 
-  function handleRemovePlace() {
+  const handleRemovePlace = useCallback(function handleRemovePlace() {
     setPickedPlaces((prevPickedPlaces) =>
       prevPickedPlaces.filter((place) => place.id !== selectedPlace.current)
     );
-    modal.current.close();
-  }
+   setModalIsOpen(false);
+    const storedId = JSON.parse(localStorage.getItem('selectedPlaces')) || [];
+    localStorage.setItem(
+      'selectedPlaces' ,
+      JSON.stringify(storedId.filter((id) => id !== selectedPlace.current))
+    );
+  },[]);
 
   return (
     <>
-      <Modal ref={modal}>
+      <Modal open={mpdalIsOpen}>
+        
         <DeleteConfirmation
           onCancel={handleStopRemovePlace}
           onConfirm={handleRemovePlace}
         />
+       
       </Modal>
 
       <header>
@@ -72,7 +86,7 @@ function App() {
         />
         <Places
           title="Available Places"
-          places={AVAILABLE_PLACES}
+          places={availablePlaces}
           onSelectPlace={handleSelectPlace}
         />
       </main>
